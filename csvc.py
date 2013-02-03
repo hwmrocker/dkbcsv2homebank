@@ -89,50 +89,48 @@ def guess_category(payee, description, last_catergory=""):
 	return ""
 
 
-
 def convert_csv(csv_filename):
-	csv_fh = open(csv_filename, encoding="latin-1")
-	account_type, account_info = split_line(csv_fh.readline())
+	with open(csv_filename, encoding="latin-1") as csv_fh:
+		account_type, account_info = split_line(csv_fh.readline())
 
-	it = get_transactions_visadkb(csv_fh)
-	von, bis = next(it)
-	fn = "dkbvisa_%s-%s.csv" % (von.strftime("%y%m%d"), bis.strftime("%y%m%d"))
-	with open(fn, "w") as fh:
-		# fh.write(Transaction.csv_head)
-		for transaction in it:
-			fh.write(transaction.to_csv())
+		it = get_transactions_visadkb(csv_fh)
+		von, bis = next(it)
+		fn = "dkbvisa_%s-%s.csv" % (von.strftime("%y%m%d"), bis.strftime("%y%m%d"))
+		with open(fn, "w") as fh:
+			# fh.write(Transaction.csv_head)
+			for transaction in it:
+				fh.write(transaction.to_csv())
 
-class Transaction(object):
-	csv_head = "date;paymode;info;payee;description;amount;category\n"
-	def __init__(self, date, amount, **kw):
-		#date ; paymode ; info ; payee ; description ; amount ; category
-		self.date = date
-		self.paymode = kw.get('paymode', PAYMODE_NONE)
-		self.info = kw.get('info', "")
-		self.payee = kw.get('payee', "Unknown")
-		self.description = kw.get('description', "")
-		self.amount = amount
-		self.category = kw.get('category', "")
+def convert_awd_csv(csv_filename):
+	with open(csv_filename) as csv_fh:
+		with open("awd.csv", "w") as fh:
+			for transaction in get_transactions_awd(csv_fh):
+				fh.write(transaction.to_csv())
 
 
-	def get_csv_date(self):
-		return self.date.strftime("%d-%m-%y")
-	def get_csv_paymode(self):
-		return str(self.paymode)
-	def get_csv_info(self):
-		return self.info
-	def get_csv_payee(self):
-		return self.payee
-	def get_csv_description(self):
-		return self.description
-	def get_csv_amount(self):
-		return "%.2f" % self.amount
-	def get_csv_category(self):
-		return self.category
-	def to_csv(self):
-		data = ["date", "paymode", "info", "payee", "description", "amount", "category"]
-		return "%s\n"% ";".join(map(lambda x: getattr(self, "get_csv_%s" % x)(), data))
+def guess_awd_category(category, payee):
+	if category in ("grocery", "lunch", "dine out"):
+		return "food:%s" % category
+	if category == "travel":
+		return "%s:%s" % (category, payee)
+	return category
 
+def guess_awd_payee(payee=""):
+	if payee.lower() == "other":
+		return ""
+	return payee.upper()
+
+# 1 'lunch,Pepenero,7,2012-12-19\n'
+def get_transactions_awd(csv_fh):
+	for line in csv_fh:
+		major_cat, minor_cat, amount, date_str = line.strip('\n').split(',')
+		payee = guess_awd_payee(minor_cat)
+		category = guess_awd_category(major_cat, payee)
+		date = datetime.strptime(date_str, "%Y-%m-%d")
+		amount = -Decimal(amount)  
+		if category == "income":
+			amount = -amount
+		yield Transaction(payee=payee, category=category, date=date, amount=amount, paymode=PAYMODE_CASH)
 # 1 "Kreditkarte:";"4998************ Kreditkarte";
 # 2
 # 3 "Von:";"27.12.2012";
@@ -196,4 +194,4 @@ def get_dkbvisa_transaction(line):
 #         category => a full category name (category, or category:subcategory)
 
 if __name__ == "__main__":
-	convert_csv("import/4998____________.csv")
+	convert_awd_csv("inout/awd.csv")
