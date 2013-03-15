@@ -30,7 +30,8 @@ class Transaction(object):
 		self.description = kw.get('description', "")
 		self.amount = amount
 		self.category = kw.get('category', "")
-		self.data = ["date", "paymode", "info", "payee", "description", "amount", "category"]
+		self.data = ["date", "paymode", "info", "payee", "description",
+			"amount", "category"]
 
 	def _get_csv_date(self):
 		return self.date.strftime("%d-%m-%y")
@@ -48,19 +49,25 @@ class Transaction(object):
 		return self.category
 
 	def to_csv(self):
-		return "%s\n"% ";".join(map(lambda x: getattr(self, "_get_csv_%s" % x)(), self.data))
+		return "%s\n"% ";".join(map(
+			lambda x: getattr(self, "_get_csv_%s" % x)(), 
+			self.data))
 
 class WrongCSVConverterError(Exception): pass
 
 class CSVConverter(object):
 	DATE_FORMAT = "%d.%m.%Y"
+	DELIMITER = ","
+	TRANSACTION_ORDER = ["paymode","info","payee","description","category"]
+	FILE_ENCODING = "utf8"
 
 	"""docstring for CSVConverter"""
 	def __init__(self, filename):
-		if not self.check(filename):
+		self.fh = open(filename, encoding=self.FILE_ENCODING)
+		if not self.check():
+			self.fh.close()
 			raise WrongCSVConverterError
-		self.fh = open(filename)
-		self.seekToData()
+		# self.seekToData()
 
 	@classmethod
 	def check(cls, filename):
@@ -69,7 +76,7 @@ class CSVConverter(object):
 	def getTransactions(self):
 		"""is an iterator that returns all Transactions from the file"""
 		for line in self.fh:
-			yield self.lineToTransaction(line)
+			yield self.lineToTransaction(line.strip())
 
 	def convert_to(self, new_filename):
 		with open(new_filename, "w") as fh:
