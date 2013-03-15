@@ -1,4 +1,4 @@
-from plugins import DKBVisa
+from plugins import DKBVisa, PersonalExpense
 
 if __name__ == "__main__":
 	cvo = DKBVisa("inout/visa.csv")

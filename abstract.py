@@ -60,6 +60,7 @@ class CSVConverter(object):
 	DELIMITER = ","
 	TRANSACTION_ORDER = ["paymode","info","payee","description","category"]
 	FILE_ENCODING = "utf8"
+	STRIP = ""
 
 	"""docstring for CSVConverter"""
 	def __init__(self, filename):
@@ -69,8 +70,7 @@ class CSVConverter(object):
 			raise WrongCSVConverterError
 		# self.seekToData()
 
-	@classmethod
-	def check(cls, filename):
+	def check(self):
 		raise NotImplementedError
 
 	def getTransactions(self):
@@ -90,11 +90,49 @@ class CSVConverter(object):
 	def to_decimal(self, value):
 		if " " in value:
 			value, _ = value.split(" ", 1)
-		return Decimal(value.replace(",", "."))
+		return Decimal(value.replace(".","").replace(",", "."))
 
 	def to_date(self, value):
+		# print(self.DATE_FORMAT)
 		return datetime.strptime(value, self.DATE_FORMAT)
 
+	def getElements(self, line):
+		return list(map(lambda x:x.strip(self.STRIP), line.split(self.DELIMITER)))
+	
+	def lineToTransaction(self, line):
+		elements = self.getElements(line)
+		print(elements)
+		transaction_dict = {
+			'date': self.get_date(elements),
+			'amount': self.get_amount(elements)
+		}
 
+		for foo in self.TRANSACTION_ORDER:
+			getter = getattr(self, "get_%s" % foo)
+			tmp = getter(elements, transaction_dict)
+			if tmp is not None:
+				transaction_dict[foo] = tmp
 
-		
+		# print(transaction_dict)
+		return Transaction(**transaction_dict)
+
+	def get_amount(self, elements):
+		return self.to_decimal(elements[self.AMOUNT_INDEX])
+
+	def get_date(self, elements):
+		return self.to_date(elements[self.DATE_INDEX])
+
+	def get_paymode(self, elements, transaction_dict):
+		return
+
+	def get_info(self, elements, transaction_dict):
+		return
+
+	def get_payee(self, elements, transaction_dict):
+		return
+
+	def get_description(self, elements, transaction_dict):
+		return
+
+	def get_category(self, elements, transaction_dict):
+		return
