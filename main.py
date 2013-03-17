@@ -1,6 +1,6 @@
-from plugins import DKBVisa, PersonalExpense
+from plugins import DKBVisa, PersonalExpense, DKBKonto
 
 if __name__ == "__main__":
-	cvo = DKBVisa("inout/visa.csv")
+	cvo = DKBKonto("inout/konto.csv")
 	cvo.convert_to("inout/new.csv")
 	
